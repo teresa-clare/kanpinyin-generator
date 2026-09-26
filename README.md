@@ -21,3 +21,7 @@
 
 ## 📄 许可
 © 2026 teresa-clare。代码基于 MIT 协议开源，转载请保留署名。
+
+<img width="1466" height="1398" alt="QQ_1790389945165" src="https://github.com/user-attachments/assets/cfd0a489-f03c-4f1c-8883-dd93f10fb75d" />
+<img width="2364" height="1503" alt="QQ_1790390016613" src="https://github.com/user-attachments/assets/7a5f70c5-1f75-49f2-9ebd-b244a33e45f6" />
+
