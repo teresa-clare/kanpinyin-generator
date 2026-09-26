@@ -10,10 +10,7 @@
 - 一键打印 / 保存为 PDF
 
 ## 🚀 使用
-直接打开在线页面即可：
-👉 https://teresa-clare.github.io/kanpinyin-generator/
-
-也可以下载 `index.html` 到本地双击打开。
+下载 `index.html` 到本地双击打开。
 
 ## 📖 拼音指定语法
 | 写法 | 效果 |
