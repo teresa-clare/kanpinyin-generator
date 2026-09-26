@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<!--
+  ╔═══════════════════════════════════════════════════╗
+  ║          看拼音写词语生成器 分享版                                  				 ║
+  ║                                                   								 ║
+  ║   作者   ：  <teresa-clare>                             					 ║
+  ║   联系   ：  <teresa_no1@126.com>                          				 ║
+  ║   版权   ：  © 2026 <teresa-clare> 保留所有权利          				 ║
+  ║                                                   								 ║
+  ║   本工具供个人与教学场景免费使用，                   					 ║
+  ║   转载或二次分发请完整保留本声明。                   					 ║
+  ╚═══════════════════════════════════════════════════╝
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>看拼音写词语生成器</title>
+<script src="https://unpkg.com/pinyin-pro"></script>
+
+<script>
+/* ============================================================
+ *  ★★★ 默认设置（在这里修改，保存后刷新页面即生效） ★★★
+ * ============================================================ */
+const CONFIG = {
+
+  /* 练习卷顶部的大标题，随意填写 */
+  title: "看拼音写词语练习",
+
+  /* 姓名栏文字，填空线用下划线表示；留空 "" 则不显示这一行 */
+  nameLine: "姓名：____________",
+
+  /* 纸张大小，可选（注意区分大小写）：
+     "A4"     —— A4（210 × 297 mm），最常用
+     "A3"     —— A3（297 × 420 mm）
+     "B5"     —— B5（176 × 250 mm）
+     "letter" —— Letter（8.5 × 11 in，英美制） */
+  paperSize: "A4",
+
+  /* 排列方式，可选（注意区分大小写）：
+     "order"  —— 保持顺序：按下面词汇的输入顺序排，一行放不下就换行
+     "fill"   —— 允许补位：长词放不下时先跳过，后面的短词提前补空
+     "sorted" —— 按长度排序：短的在前，同样长的保持输入顺序 */
+  packMode: "fill",
+
+  /* 田字格大小，单位像素。51px ≈ 1.35cm，适合低年级书写。
+     建议范围 28 ~ 80，数字越大格子越大，每行能放的词越少 */
+  cellSize: 51,
+
+  /* 词语与词语之间的空隙，单位像素。12px ≈ 3mm */
+  wordGap: 12,
+
+  /* 中文字体，可选（注意区分大小写）：
+     "kaiti"  —— 楷体（默认，最贴合课本书写规范）
+     "songti" —— 宋体
+     "heiti"  —— 黑体
+     "yahei"  —— 微软雅黑 / 苹方
+     "fangsong" —— 仿宋
+     "youyuan"  —— 幼圆
+     "xingkai"  —— 华文行楷（手写感）
+     "xinwei"   —— 华文新魏
+     应用于：标题、姓名栏、古诗标题、作者行。
+     拼音固定使用 Times New Roman，不随此设置变化。 */
+  fontChinese: "kaiti",
+
+  /* 词汇内容：词与词之间用空格、逗号或换行分隔均可
+     ★★★ 指定拼音的写法：词|拼音 ★★★
+     写法                         效果
+     好吗|hǎo ma                  音节用空格或短横线分隔
+     工作辛苦|gong1-zuo4-xin1-ku3 音节用 - 连写，支持数字声调 1~4
+     好了|hao3 le                 不写数字或写 5 = 轻声
+     女|nv3                       v 表示 ü（nv3 → nǚ）
+     老师|lǎo shī 你真棒    指定拼音的词后面可以紧跟其它词，互不干扰 */
+  words:
+    "希望 这个 小工具 " +
+    "能够 帮助你 " ,
+
+  /* ---------- 古诗栏目（位于词汇之后，支持多首） ----------
+     每首诗一个小块，格式固定为四行：title / author / lines / chars
+     title : 诗名（居中显示）
+     author: 作者（居中显示；留空 "" 则生成一条填写横线，供学生写作者）
+     lines : 书写横线的行数
+     chars : 每行字数（横线长度 = chars × 田字格宽）
+
+     ★ 要添加更多古诗：复制一整块 { ... },（含花括号和逗号），
+       粘贴到上一块后面，修改内容即可。注意每块末尾的逗号。
+     ★ 要删除古诗：删掉对应的一整块 { ... },。
+     ★ 整个栏目不显示：改成 poems: [],                                        */
+  poems: [
+    {
+      title:  "静夜思",
+      author: "唐·李白",
+      lines:  4,
+      chars:  5
+    },
+    {
+      title:  "蜀相",
+      author: "",
+      lines:  8,
+      chars:  7
+    }
+  ]
+};
+/* ============================================================ */
+</script>
+
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f2f5; color: #333; }
+
+  /* ---------- 控制面板 ---------- */
+  .panel { max-width: 900px; margin: 20px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .panel h1 { margin: 0 0 20px; font-size: 22px; color: #1a73e8; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .field { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; color: #666; }
+  .field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; background: #fff; }
+  .field textarea { resize: vertical; min-height: 100px; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+  button { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; background: #1a73e8; color: #fff; transition: background .2s; }
+  button:hover { background: #1557b0; }
+  button.secondary { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+  button.secondary:hover { background: #e8f0fe; }
+  .tip { font-size: 12px; color: #999; line-height: 1.7; }
+  .tip code { background: #f0f2f5; padding: 1px 5px; border-radius: 4px; color: #c7254e; font-size: 12px; }
+
+  /* ---------- 预览纸张 ----------
+     屏幕模拟整张纸：宽度 = 纸宽（JS 按 mm 设置），
+     内边距 15mm 模拟页边距 → 内容区 = 纸宽 − 30mm（与打印一致） */
+  .sheet { margin: 20px auto; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .sheet-inner { padding: 15mm; }
+  .sheet-title { text-align: center; font-size: 22px; margin: 0 0 12px; font-weight: bold; }
+  .sheet-name { text-align: right; font-size: 14px; margin: 0 0 20px; }
+
+  .word-row { display: flex; align-items: flex-end; margin: 0 0 16px; }
+
+  /* 一个词语：拼音行 + 田字格行 */
+  .card { break-inside: avoid; page-break-inside: avoid; width: fit-content; }
+
+  /* 拼音行：与田字格行逐字等宽对齐，行高压紧以节省纵向空间
+     拼音字体固定 Times New Roman（不提供选择） */
+  .py-row { display: flex; }
+  .py {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    white-space: nowrap;
+    overflow: visible;
+    font-family: "Times New Roman", serif;
+    line-height: 1.3;
+    flex-shrink: 0;
+  }
+
+  /* 田字格行：格子紧贴，共享边线不叠加 */
+  .tz-row { display: flex; }
+  .tz { position: relative; border: 1.5px solid #333; flex-shrink: 0; }
+  .tz + .tz { border-left: none; }
+  .tz .h { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed #bbb; }
+  .tz .v { position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px dashed #bbb; }
+
+  /* ---------- 古诗栏目 ---------- */
+  .poem-block { margin-top: 30px; break-inside: avoid; page-break-inside: avoid; }
+  .poem-title  { text-align: left; font-size: 18px; font-weight: bold; margin: 0 0 6px; }
+  .poem-author { text-align: left; font-size: 14px; color: #555; margin: 0 0 48px; }
+  .poem-author-line {
+    width: 160px;
+    height: 0;
+    border-bottom: 1px solid #333;
+    margin: 40px 0 48px 0;
+  }
+  .poem-line {
+    height: 0;
+    border-bottom: 1px solid #333;
+    margin: 0 0 48px 0;
+  }
+
+  /* ---------- 打印样式 ---------- */
+  @media print {
+    body { background: #fff; margin: 0; }
+    .panel { display: none !important; }
+    .sheet { box-shadow: none; margin: 0; width: auto !important; }
+    .sheet-inner { padding: 0; }
+    .word-row { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+<!-- @page 纸张尺寸：JS 动态更新 -->
+<style id="pageStyle">@page { size: A4; margin: 1.5cm; }</style>
+</head>
+<body>
+
+<!-- 控制面板（控件的初始值由文件顶部的 CONFIG 自动填入） -->
+<div class="panel">
+  <h1>📝 看拼音写词语生成器</h1>
+  <div class="row">
+    <div class="field"><label>标题</label><input id="title"></div>
+    <div class="field"><label>姓名栏</label><input id="nameLine"></div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>纸张大小</label>
+      <select id="paperSize">
+        <option value="A4">A4（210 × 297 mm）</option>
+        <option value="A3">A3（297 × 420 mm）</option>
+        <option value="B5">B5（176 × 250 mm）</option>
+        <option value="letter">Letter（8.5 × 11 in）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>排列方式</label>
+      <select id="packMode">
+        <option value="order">保持顺序（放不下就换行）</option>
+        <option value="fill">允许补位（短词前移填空）</option>
+        <option value="sorted">按长度排序（短的在前，同长保持原序）</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>中文字体</label>
+      <select id="fontChinese">
+        <option value="kaiti">楷体（默认，推荐）</option>
+        <option value="songti">宋体</option>
+        <option value="heiti">黑体</option>
+        <option value="yahei">微软雅黑 / 苹方</option>
+        <option value="fangsong">仿宋</option>
+        <option value="youyuan">幼圆</option>
+        <option value="xingkai">华文行楷（手写感）</option>
+        <option value="xinwei">华文新魏</option>
+      </select>
+    </div>
+    <div class="field"><label>田字格大小(px)</label><input id="cellSize" type="number" min="28" max="80"></div>
+    <div class="field"><label>词语间距(px)</label><input id="wordGap" type="number" min="0" max="120"></div>
+  </div>
+  <div class="field" style="margin-bottom:16px;">
+    <label>词汇（用空格 / 逗号分隔）</label>
+    <textarea id="words"></textarea>
+        <div class="tip">
+      💡 可以指定拼音：<b>词|拼音</b>，音节用空格或 - 分隔；
+      数字 1~4 表示声调，<b>v 表示 ü</b>，不写数字（或写 5）为轻声。<br>
+      示例：<code>好吗|hǎo ma</code>　<code>工作辛苦|gong1-zuo4-xin1-ku3</code>　
+      <code>女|nv3</code>　<code>春天|chūn tiān 来了</code>（后面可紧跟其它词）
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:16px;">
+    <label>古诗（每行一首：诗名|作者|行数|每行字数，作者留空则生成填写线）</label>
+    <textarea id="poems"></textarea>
+  </div>
+  <div class="btns">
+    <button onclick="generate()">生成预览</button>
+    <!-- 导出 Word 功能暂时关闭：恢复时取消下面这行的注释即可
+    <button class="secondary" onclick="exportWord()">导出 Word</button>
+    -->
+    <button class="secondary" onclick="printPDF()">打印 / 保存为 PDF</button>
+  </div>
+  <div class="tip" style="margin-top:8px;">
+    💡 保存 PDF：打印对话框中「目标」选 <b>另存为 PDF</b>；
+    「缩放」保持 <b>100%</b>、「页边距」选 <b>默认</b>（对应 1.5cm）、取消勾选「页眉和页脚」。
+    打印设置改动（缩放/页边距）会导致与预览换行不一致。
+  </div>
+</div>
+
+<!-- 预览区域 -->
+<div id="sheet" class="sheet"><div id="sheetInner" class="sheet-inner"></div></div>
+
+<script>
+/* 纸张定义：宽 × 高（mm），页边距统一 1.5cm */
+const PAPERS = {
+  A4:     { w: 210,   h: 297, css: 'A4' },
+  A3:     { w: 297,   h: 420, css: 'A3' },
+  B5:     { w: 176,   h: 250, css: 'B5' },
+  letter: { w: 215.9, h: 279.4, css: 'letter' }
+};
+const MARGIN_MM = 30;              // 页边距合计（上下、左右各 1.5cm × 2）
+const MM_TO_PX  = 96 / 25.4;       // CSS 规定 1in = 96px
+const SAFETY_PX = 1;               // 装箱安全余量，抵消亚像素舍入
+
+/* 中文字体栈：key 对应下拉框 / CONFIG.fontChinese 的取值
+   每个栈按 Windows → macOS 顺序排列，末尾留 serif/sans-serif 兜底，
+   目标机器缺字体时浏览器会自动回退到后面的字体 */
+const FONT_STACKS = {
+  kaiti:    "'KaiTi','STKaiti','DFKai-SB',serif",
+  songti:   "'SimSun','Songti SC',serif",
+  heiti:    "'SimHei','Heiti SC',sans-serif",
+  yahei:    "'Microsoft YaHei','PingFang SC',sans-serif",
+  fangsong: "'FangSong','STFangsong',serif",
+  youyuan:  "'YouYuan','Yuanti SC',sans-serif",
+  xingkai:  "'STXingkai','Xingkai SC',cursive",
+  xinwei:   "'STXinwei','LiSu',cursive"
+};
+/* 拼音字体：固定，不提供选择 */
+const PY_FONT = "'Times New Roman', serif";
+
+/* 当前布局状态：generate() 时保存（导出 Word 功能关闭中，暂不使用） */
+let currentLayout = null;
+
+/* 当前格宽（buildPoem 内使用，generate() 时赋值） */
+let currentCellSize = 51;
+
+/* ============================================================
+ *  拼音覆盖 —— 解析用户手动指定的拼音
+ * ============================================================ */
+
+/* 声调符号映射表：TONE_MAP[元音][声调-1] = 带调元音 */
+const TONE_MAP = {
+  'a': ['ā','á','ǎ','à'], 'e': ['ē','é','ě','è'],
+  'i': ['ī','í','ǐ','ì'], 'o': ['ō','ó','ǒ','ò'],
+  'u': ['ū','ú','ǔ','ù'], 'ü': ['ǖ','ǘ','ǚ','ǜ'],
+  'A': ['Ā','Á','Ǎ','À'], 'E': ['Ē','É','Ě','È'],
+  'I': ['Ī','Í','Ǐ','Ì'], 'O': ['Ō','Ó','Ǒ','Ò'],
+  'U': ['Ū','Ú','Ǔ','Ù'], 'Ü': ['Ǖ','Ǘ','Ǚ','Ǜ']
+};
+
+/* 解析拼音字符串：音节用空格或 - 分隔，支持数字声调和 v→ü
+   返回：转换后的拼音音节数组；输入无效时返回 null（回退自动识别） */
+function parsePyOverride(pyStr) {
+  if (!pyStr || !pyStr.trim()) return null;
+  /* 拒绝包含汉字的"拼音"（用户误输入时回退到自动识别） */
+  if (/[\u4e00-\u9fff]/.test(pyStr)) return null;
+
+  const syllables = pyStr.trim().split(/[\s\-]+/).filter(Boolean);
+  if (syllables.length === 0) return null;
+  return syllables.map(syl => convertPySyllable(syl));
+}
+
+/* 单个音节转换：处理数字声调、v→ü、声调符号位置
+   标调规则：a > e > o > 最后一个 i/u/ü（与拼音规范一致） */
+function convertPySyllable(syl) {
+  /* 提取末尾的声调数字 */
+  let tone = 0;
+  const m = syl.match(/([1-5])$/);
+  if (m) {
+    tone = parseInt(m[1]);
+    syl = syl.slice(0, -1);
+  }
+
+  /* v → ü（小写），V → Ü（大写） */
+  syl = syl.replace(/v/g, 'ü').replace(/V/g, 'Ü');
+
+  /* 声调 5 或无数字 = 轻声，不加声调符号 */
+  if (tone === 0 || tone === 5) return syl;
+
+  /* 找到要标调的元音位置 */
+  let markIdx = -1;
+  const idxA = syl.search(/[aA]/);
+  const idxE = syl.search(/[eE]/);
+  const idxO = syl.search(/[oO]/);
+
+  if (idxA !== -1) markIdx = idxA;
+  else if (idxE !== -1) markIdx = idxE;
+  else if (idxO !== -1) markIdx = idxO;
+  else {
+    /* 无 a/e/o 时标在最后一个 i / u / ü 上（如 liú、guì、nǚ） */
+    for (let j = syl.length - 1; j >= 0; j--) {
+      if ('iuüIUÜ'.includes(syl[j])) {
+        markIdx = j;
+        break;
+      }
+    }
+  }
+
+  if (markIdx === -1) return syl;
+
+  const tonedChar = TONE_MAP[syl[markIdx]]
+    ? TONE_MAP[syl[markIdx]][tone - 1] : null;
+  if (!tonedChar) return syl;
+
+  return syl.slice(0, markIdx) + tonedChar + syl.slice(markIdx + 1);
+}
+
+/* ============================================================ */
+
+/* 把 CONFIG 的默认值填入各个控件（用户之后仍可在页面上临时修改） */
+function applyConfigToControls() {
+  document.getElementById('title').value    = CONFIG.title    || '';
+  document.getElementById('nameLine').value = CONFIG.nameLine || '';
+  document.getElementById('paperSize').value = PAPERS[CONFIG.paperSize] ? CONFIG.paperSize : 'A4';
+  document.getElementById('packMode').value  = ['order','fill','sorted'].includes(CONFIG.packMode) ? CONFIG.packMode : 'fill';
+  document.getElementById('cellSize').value  = CONFIG.cellSize;
+  document.getElementById('wordGap').value   = CONFIG.wordGap;
+  document.getElementById('words').value     = CONFIG.words    || '';
+
+  /* 中文字体：CONFIG 值无效时回退到楷体 */
+  document.getElementById('fontChinese').value =
+    FONT_STACKS[CONFIG.fontChinese] ? CONFIG.fontChinese : 'kaiti';
+
+  /* 多首古诗 → 每行一首的文本（诗名|作者|行数|每行字数） */
+  const poems = Array.isArray(CONFIG.poems) ? CONFIG.poems : [];
+  document.getElementById('poems').value = poems.map(p =>
+    [p.title || '', p.author || '', p.lines ?? 4, p.chars ?? 7].join('|')
+  ).join('\n');
+}
+
+/* 分词：支持"词|拼音"语法
+   先按逗号、顿号、分号、换行切分段落；段落内以空格分词。
+   竖线后跟随的拼音音节用空格或 - 分隔，
+   遇到汉字 token 或下一个带 | 的词即停止收集，自动区分归属。
+   返回：[{ text: "词语", pyOverride: ["pīn","yīn"] | null }, ...] */
+function parseWords(text) {
+  const segments = text.split(/[,，、;；\n]+/);
+  const results = [];
+
+  for (const seg of segments) {
+    const trimmed = seg.trim();
+    if (!trimmed) continue;
+    const tokens = trimmed.split(/\s+/);
+
+    let i = 0;
+    while (i < tokens.length) {
+      const token = tokens[i];
+      i++;
+
+      const pipeIdx = token.indexOf('|');
+      if (pipeIdx === -1) {
+        /* 普通词，无拼音覆盖 */
+        if (token) results.push({ text: token, pyOverride: null });
+        continue;
+      }
+
+      /* 带 | 的词：竖线前是词语，竖线后是拼音的开头 */
+      const word = token.slice(0, pipeIdx).trim();
+      let pyStr = token.slice(pipeIdx + 1).trim();
+
+      /* 收集后续拉丁字母 token 作为拼音音节 */
+      while (i < tokens.length) {
+        const next = tokens[i];
+        /* 遇到汉字（其它词）或下一个带 | 的词 → 停止 */
+        if (/[\u4e00-\u9fff]/.test(next) || next.includes('|')) break;
+        /* 非拉丁字母 token（如标点）→ 停止 */
+        if (!/[a-zA-Z]/.test(next)) break;
+        pyStr += (pyStr ? ' ' : '') + next;
+        i++;
+      }
+
+      if (word) {
+        results.push({ text: word, pyOverride: parsePyOverride(pyStr) });
+      }
+    }
+  }
+  return results.filter(w => w.text);
+}
+
+/* 解析古诗文本：每行一首「诗名|作者|行数|每行字数」
+   分隔符兼容 | 、｜、逗号（中英文）、顿号 */
+function parsePoems(text) {
+  const poems = [];
+  text.split(/\n+/).forEach(line => {
+    line = line.trim();
+    if (!line) return;
+    const parts = line.split(/[|｜,，、]/).map(s => s.trim());
+    if (parts.length === 0) return;
+    poems.push({
+      title:  parts[0] || '',
+      author: parts[1] || '',
+      lines:  Math.min(20, Math.max(0, parseInt(parts[2]) || 0)),
+      chars:  Math.min(20, Math.max(1, parseInt(parts[3]) || 7))
+    });
+  });
+  return poems.filter(p => p.title && p.lines > 0);
+}
+
+/* 整词转拼音：优先使用用户指定的拼音，否则调用 pinyin-pro 库 */
+function getPinyinArr(word, pyOverride) {
+  const chars = [...word];
+
+  /* 用户指定了拼音：按汉字顺序逐一对齐 */
+  if (pyOverride && pyOverride.length > 0) {
+    let pyIdx = 0;
+    return chars.map(ch => {
+      if (/[\u4e00-\u9fa5]/.test(ch)) {
+        return pyOverride[pyIdx++] || '';
+      }
+      return '';
+    });
+  }
+
+  /* 未指定：使用 pinyin-pro 库自动识别（多音字按词组语境判断） */
+  if (typeof pinyinPro === 'undefined') return chars.map(() => '');
+  try {
+    const arr = pinyinPro.pinyin(word, { toneType: 'symbol', type: 'array' });
+    return chars.map((ch, i) =>
+      /[\u4e00-\u9fa5]/.test(ch) ? (arr[i] || '') : ''
+    );
+  } catch (e) {
+    return chars.map(ch => {
+      if (/[\u4e00-\u9fa5]/.test(ch)) {
+        try { return pinyinPro.pinyin(ch, { toneType: 'symbol' }); } catch (e2) { return ''; }
+      }
+      return '';
+    });
+  }
+}
+
+/* HTML 转义（用于标题/姓名等用户输入文本） */
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* 纸张切换：
+   预览纸张 = 整张纸宽，内边距 15mm 模拟页边距
+   内容区宽度 = 纸宽 − 30mm，与打印 @page 提供的可用宽度相等 */
+function applyPaper() {
+  const p = PAPERS[document.getElementById('paperSize').value];
+  document.getElementById('pageStyle').textContent =
+    `@page { size: ${p.css}; margin: 1.5cm; }`;
+  document.getElementById('sheet').style.width = p.w + 'mm';
+  return (p.w - MARGIN_MM) * MM_TO_PX;
+}
+
+/* 词语宽度 = 字数 × 格宽（word 为 {text, pyOverride} 对象） */
+function wordWidth(word, cellSize) {
+  return [...word.text].length * cellSize;
+}
+
+/* 装箱：
+   order   = 保持顺序，放不下就换行
+   fill    = 允许补位，放不下的先跳过，短词前移
+   sorted  = 先按长度稳定排序，再按顺序装箱 */
+function packRows(words, cellSize, wordGap, availPx, mode) {
+  const limit = availPx - SAFETY_PX;
+  const rows = [];
+
+  /* sorted：稳定排序后走 order 逻辑 */
+  if (mode === 'sorted') {
+    words = [...words].sort((a, b) =>
+      [...a.text].length - [...b.text].length
+    );
+    mode = 'order';
+  }
+
+  if (mode === 'order') {
+    let row = [], rowW = 0;
+    words.forEach(word => {
+      const w = wordWidth(word, cellSize);
+      const need = row.length === 0 ? w : rowW + wordGap + w;
+      if (need <= limit) {
+        row.push(word);
+        rowW = need;
+      } else {
+        rows.push(row);
+        row = [word];
+        rowW = w;
+      }
+    });
+    if (row.length) rows.push(row);
+    return rows;
+  }
+
+  /* fill 模式：first-fit 跳过补位 */
+  const remaining = [...words];
+  while (remaining.length) {
+    const row = [];
+    let rowW = 0;
+    for (let i = 0; i < remaining.length; ) {
+      const w = wordWidth(remaining[i], cellSize);
+      const need = row.length === 0 ? w : rowW + wordGap + w;
+      if (need <= limit) {
+        row.push(remaining.splice(i, 1)[0]);
+        rowW = need;
+      } else {
+        i++;
+      }
+    }
+    if (row.length === 0) {
+      let minIdx = 0;
+      remaining.forEach((w, idx) => {
+        if (wordWidth(w, cellSize) < wordWidth(remaining[minIdx], cellSize)) minIdx = idx;
+      });
+      row.push(remaining.splice(minIdx, 1)[0]);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* 生成一个词语卡片（屏幕预览用，flex 版）
+   拼音字体固定 Times New Roman（CSS 中已定义，无需内联覆盖） */
+function buildCard(word, cellSize, pySize) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const chars = [...word.text];
+  const pinyinArr = getPinyinArr(word.text, word.pyOverride);
+
+  const pyRow = document.createElement('div');
+  pyRow.className = 'py-row';
+  chars.forEach((ch, j) => {
+    const py = document.createElement('div');
+    py.className = 'py';
+    py.textContent = pinyinArr[j] || '';
+    py.style.width    = cellSize + 'px';
+    py.style.fontSize = pySize + 'px';
+    pyRow.appendChild(py);
+  });
+  card.appendChild(pyRow);
+
+  const tzRow = document.createElement('div');
+  tzRow.className = 'tz-row';
+  chars.forEach(() => {
+    const tz = document.createElement('div');
+    tz.className = 'tz';
+    tz.style.width  = cellSize + 'px';
+    tz.style.height = cellSize + 'px';
+    const hline = document.createElement('span'); hline.className = 'h';
+    const vline = document.createElement('span'); vline.className = 'v';
+    tz.appendChild(hline); tz.appendChild(vline);
+    tzRow.appendChild(tz);
+  });
+  card.appendChild(tzRow);
+
+  return card;
+}
+
+/* 生成一首古诗栏目：诗名 + 作者（或填写线）+ 指定行数的书写横线
+   fontCn：中文字体栈，应用于诗名与作者行 */
+function buildPoem(poem, fontCn) {
+  const block = document.createElement('div');
+  block.className = 'poem-block';
+
+  const t = document.createElement('div');
+  t.className = 'poem-title';
+  t.textContent = poem.title;
+  t.style.fontFamily = fontCn;
+  block.appendChild(t);
+
+  if (poem.author) {
+    /* 有作者：直接显示文字 */
+    const a = document.createElement('div');
+    a.className = 'poem-author';
+    a.textContent = poem.author;
+    a.style.fontFamily = fontCn;
+    block.appendChild(a);
+  } else {
+    /* 无作者：生成一条短横线，供学生填写作者 */
+    const al = document.createElement('div');
+    al.className = 'poem-author-line';
+    block.appendChild(al);
+  }
+
+  for (let i = 0; i < poem.lines; i++) {
+    const line = document.createElement('div');
+    line.className = 'poem-line';
+    line.style.width = (poem.chars * currentCellSize) + 'px';  // 横线长 = 字数 × 田字格宽
+    block.appendChild(line);
+  }
+  return block;
+}
+
+/* 生成预览 */
+function generate() {
+  if (typeof pinyinPro === 'undefined') {
+    alert('拼音库加载失败，请检查网络后刷新页面。');
+    return;
+  }
+  const title    = document.getElementById('title').value;
+  const nameLine = document.getElementById('nameLine').value;
+  const cellSize = Math.max(28, parseInt(document.getElementById('cellSize').value) || 51);
+  const wordGap  = Math.max(0,  parseInt(document.getElementById('wordGap').value)  || 12);
+  const packMode = document.getElementById('packMode').value;
+  const paperKey = document.getElementById('paperSize').value;
+  const words    = parseWords(document.getElementById('words').value);
+  const poems    = parsePoems(document.getElementById('poems').value);
+
+  if (words.length === 0 && poems.length === 0) {
+    alert('请输入至少一个词汇，或至少一首古诗'); return;
+  }
+
+  /* 中文字体：读下拉框 → 取对应字体栈（无效 key 回退楷体） */
+  const fontKey = document.getElementById('fontChinese').value;
+  const fontCn  = FONT_STACKS[fontKey] || FONT_STACKS.kaiti;
+
+  currentCellSize = cellSize;
+  const availPx = applyPaper();
+
+  const inner = document.getElementById('sheetInner');
+  inner.innerHTML = '';
+
+  const h = document.createElement('div');
+  h.className = 'sheet-title';
+  h.textContent = title;
+  h.style.fontFamily = fontCn;
+  inner.appendChild(h);
+
+  if (nameLine) {
+    const nl = document.createElement('div');
+    nl.className = 'sheet-name';
+    nl.textContent = nameLine;
+    nl.style.fontFamily = fontCn;
+    inner.appendChild(nl);
+  }
+
+  const pySize = Math.max(11, Math.round(cellSize * 0.3));
+
+  /* 词汇区（词汇为空时跳过，只出古诗） */
+  let rows = [];
+  if (words.length > 0) {
+    rows = packRows(words, cellSize, wordGap, availPx, packMode);
+    rows.forEach(rowWords => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'word-row';
+      rowDiv.style.gap = wordGap + 'px';
+      rowWords.forEach(word => rowDiv.appendChild(buildCard(word, cellSize, pySize)));
+      inner.appendChild(rowDiv);
+    });
+  }
+
+  /* 古诗区：按输入顺序依次生成多首，位于词汇之后 */
+  poems.forEach(poem => inner.appendChild(buildPoem(poem, fontCn)));
+
+  /* 保存布局状态（导出 Word 功能关闭中，保留以备恢复） */
+  currentLayout = { title, nameLine, cellSize, wordGap, pySize, rows, paperKey, poems, fontKey, fontCn };
+}
+
+/* ============================================================
+   ★ 导出 Word 功能（暂时注释关闭）★
+   恢复方法：删除本注释块前后的 "/*" 与 "*∕" 标记即可。
+   （内部已适配"词|拼音"对象格式与中文字体选择）
+   ============================================================
+
+function px2pt(v) { return +(v * 0.75).toFixed(2); }
+
+function wordTableHTML(word, cellPt, pyPt) {
+  const chars = [...word.text];
+  const py = getPinyinArr(word.text, word.pyOverride);
+
+  let t = '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;">';
+
+  t += '<tr>';
+  chars.forEach((ch, j) => {
+    t += `<td style="width:${cellPt}pt;height:${(pyPt * 1.4).toFixed(2)}pt;` +
+         `text-align:center;vertical-align:bottom;padding:0;border:none;` +
+         `font-family:${PY_FONT};font-size:${pyPt}pt;color:#000;">` +
+         (py[j] || '') + '</td>';
+  });
+  t += '</tr>';
+
+  t += '<tr>';
+  chars.forEach(() => {
+    const frame = 'border:0.75pt solid #333;';
+    t += `<td style="width:${cellPt}pt;height:${cellPt}pt;padding:0;border:none;${frame}">` +
+         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;height:100%;">' +
+         '<tr>' +
+         '<td style="border:none;border-right:0.5pt dashed #bbb;border-bottom:0.5pt dashed #bbb;"></td>' +
+         '<td style="border:none;border-bottom:0.5pt dashed #bbb;"></td>' +
+         '</tr><tr>' +
+         '<td style="border:none;border-right:0.5pt dashed #bbb;"></td>' +
+         '<td style="border:none;"></td>' +
+         '</tr></table></td>';
+  });
+  t += '</tr></table>';
+  return t;
+}
+
+function lineTableHTML(rowWords, cellPt, gapPt, pyPt) {
+  let t = '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;"><tr>';
+  rowWords.forEach((word, i) => {
+    t += `<td style="padding:0;vertical-align:bottom;` +
+         (i > 0 ? `padding-left:${gapPt}pt;` : '') + '">';
+    t += wordTableHTML(word, cellPt, pyPt);
+    t += '</td>';
+  });
+  t += '</tr></table>';
+  return t;
+}
+
+function nameLineHTML(nameLine, namePt, fontCn) {
+  const m = nameLine.match(/(_{2,})\s*$/);
+  if (!m) {
+    return `<p style="text-align:right;font-size:${namePt}pt;` +
+           `font-family:${fontCn};margin:0 0 ${px2pt(20)}pt 0;">${esc(nameLine)}</p>`;
+  }
+  const before = esc(nameLine.slice(0, m.index));
+  const lineW  = px2pt(m[1].length * 14);
+  return `<p style="text-align:right;font-size:${namePt}pt;` +
+         `font-family:${fontCn};margin:0 0 ${px2pt(20)}pt 0;">${before}` +
+         `<span style="display:inline-block;width:${lineW}pt;height:${namePt}pt;` +
+         `border-bottom:0.75pt solid #333;margin-left:4pt;">&nbsp;</span></p>`;
+}
+
+function exportWord() {
+  if (!currentLayout || (!currentLayout.rows.length && !currentLayout.poems.length)) {
+    alert('请先生成预览'); return;
+  }
+
+  const { title, nameLine, cellSize, wordGap, pySize, rows, paperKey, poems, fontCn } = currentLayout;
+  const p = PAPERS[paperKey];
+
+  const cellPt   = px2pt(cellSize);
+  const gapPt    = px2pt(wordGap);
+  const pyPt     = px2pt(pySize);
+  const rowGapPt = px2pt(16);
+  const titlePt  = px2pt(22);
+  const namePt   = px2pt(14);
+
+  let content = '';
+
+  if (title) {
+    content += `<p style="text-align:center;font-size:${titlePt}pt;font-weight:bold;` +
+               `font-family:${fontCn};margin:0 0 ${px2pt(12)}pt 0;">${esc(title)}</p>`;
+  }
+  if (nameLine) {
+    content += nameLineHTML(nameLine, namePt, fontCn);
+  }
+
+  rows.forEach(rowWords => {
+    content += lineTableHTML(rowWords, cellPt, gapPt, pyPt);
+    content += `<p style="margin:0;font-size:${rowGapPt}pt;line-height:${rowGapPt}pt;">&nbsp;</p>`;
+  });
+
+  poems.forEach(poem => {
+    content += `<p style="text-align:center;font-size:${px2pt(18)}pt;font-weight:bold;` +
+               `font-family:${fontCn};margin:${px2pt(30)}pt 0 ${px2pt(6)}pt 0;">${esc(poem.title)}</p>`;
+    if (poem.author) {
+      content += `<p style="text-align:center;font-size:${px2pt(14)}pt;color:#555;` +
+                 `font-family:${fontCn};margin:0 0 ${px2pt(36)}pt 0;">${esc(poem.author)}</p>`;
+    } else {
+      content += `<p style="width:${px2pt(220)}pt;margin:${px2pt(28)}pt auto ${px2pt(36)}pt auto;` +
+                 `border-bottom:0.75pt solid #333;font-size:1pt;">&nbsp;</p>`;
+    }
+    for (let i = 0; i < poem.lines; i++) {
+      content += `<p style="width:${px2pt(poem.chars * cellSize)}pt;margin:0 auto ${px2pt(40)}pt auto;` +
+                 `border-bottom:0.75pt solid #333;font-size:1pt;">&nbsp;</p>`;
+    }
+  });
+
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>${esc(title || '看拼音写词语')}</title>
+    <style>
+      @page Section1 { size:${px2pt(p.w)}pt ${px2pt(p.h)}pt; margin:42.5pt 42.5pt 42.5pt 42.5pt; }
+      div.Section1 { page:Section1; }
+      body { font-family:${fontCn}; }
+    </style>
+    </head>
+    <body><div class="Section1">${content}</div></body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = (title || '看拼音写词语') + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+============================================================ */
+
+/* 打印 / 保存为 PDF */
+function printPDF() {
+  const title = document.getElementById('title').value || '看拼音写词语练习';
+  const originalTitle = document.title;
+  document.title = title;
+  window.print();
+  document.title = originalTitle;
+}
+
+/* 控件变化时自动重新生成 */
+['paperSize', 'packMode', 'fontChinese'].forEach(id =>
+  document.getElementById(id).addEventListener('change', generate)
+);
+
+/* ---------- 修改后自动重新生成（300ms 防抖） ---------- */
+let genTimer = null;
+function autoGenerate() {
+  clearTimeout(genTimer);
+  genTimer = setTimeout(generate, 300);  // 停止输入 300ms 后才刷新
+}
+
+['title', 'nameLine', 'cellSize', 'wordGap', 'words', 'poems'].forEach(id =>
+  document.getElementById(id).addEventListener('input', autoGenerate)
+);
+
+/* 页面加载：先填入 CONFIG 默认值，再生成预览 */
+window.addEventListener('load', () => {
+  applyConfigToControls();
+  generate();
+});
+</script>
+</body>
+</html>
